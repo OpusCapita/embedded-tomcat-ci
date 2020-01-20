@@ -8,29 +8,17 @@
 
 plugins {
     id 'com.github.johnrengelman.shadow' version '5.2.0'
-
     id 'java'
-
-    // Apply the groovy plugin to add support for Groovy
     id 'groovy'
-
-    id 'application'
-}
-
-mainClassName = 'man.sab.Main'
-
-repositories {
-    // Use jcenter for resolving dependencies.
-    // You can declare any Maven/Ivy/file repository here.
-    jcenter()
+    id 'maven-publish'
 }
 
 dependencies {
     // Use the latest Groovy version for building this library
-    implementation 'org.codehaus.groovy:groovy-all:2.5.8'
+    implementation 'org.codehaus.groovy:groovy-all:2.3.7'
 
     // Use the awesome Spock testing and specification framework
-    testImplementation 'org.spockframework:spock-core:1.3-groovy-2.5'
+    testImplementation 'org.spockframework:spock-core:1.1-groovy-2.3'
 
     implementation 'org.yaml:snakeyaml:1.25'
     implementation 'com.github.pcj:google-options:1.0.0'
@@ -38,15 +26,85 @@ dependencies {
     def tomcatVersion = '7.0.99'
     implementation "org.apache.tomcat.embed:tomcat-embed-core:${tomcatVersion}",
            "org.apache.tomcat.embed:tomcat-embed-jasper:${tomcatVersion}",
+           "org.apache.tomcat.embed:tomcat-embed-el:${tomcatVersion}",
            "org.apache.tomcat:tomcat-jasper:${tomcatVersion}",
            "org.apache.tomcat:tomcat-jasper-el:${tomcatVersion}",
            "org.apache.tomcat:tomcat-jsp-api:${tomcatVersion}",
+           "org.apache.tomcat.embed:tomcat-embed-logging-juli:${tomcatVersion}",
+           "org.apache.tomcat.embed:tomcat-embed-logging-log4j:${tomcatVersion}",
+           "org.apache.tomcat:tomcat-annotations-api:${tomcatVersion}",
+           "org.apache.tomcat.embed:tomcat-embed-websocket:${tomcatVersion}",
            "org.apache.tomcat:tomcat-jdbc:${tomcatVersion}"
 }
 
 shadowJar {
-    classifier = 'executable'
-    from (System.getProperty('app.warFilePath')) {
-      into ("META-INF/app.war")
+    def applicationWarFilePath = System.properties['application.warFilePath']
+    doFirst {
+        // as a first step validate that application war file path is specified
+        if (!applicationWarFilePath) {
+            throw new GradleException("System property 'application.warFilePath' value is not defined!")
+        }
+        if (!new File(applicationWarFilePath).exists()) {
+            throw new GradleException("Application war file is not found by path '${applicationWarFilePath}'!")
+        }
     }
+
+    dependencies {
+        exclude(dependency(':testng:'))
+        exclude(dependency(':junit:'))
+        exclude(dependency('org.codehaus.groovy:'))
+        exclude(dependency('org.spockframework:'))
+    }
+
+    manifest {
+        // defining class that runs and configure application
+        attributes 'Main-Class': 'man.sab.Main'
+    }
+
+    classifier = 'executable'
+
+    // copy original war file into result JAR
+    // into 'META-INF' filder by name 'application.war'
+    from (applicationWarFilePath) {
+        into ("META-INF")
+        rename {fileName -> 'application.war'}
+    }
+}
+
+publishing {
+    publications {
+        shadow(MavenPublication) { publication ->
+            // todo: find a way to validate/set this properties only at the point of corresponding publish task execution
+            // at the moment the following code is executed at project evaluation (in fact any task execution)
+            def applicationGroupId = System.properties['application.groupId']
+            def applicationArtifactId = System.properties['application.artifactId']
+            def applicationVersion = System.properties['application.version']
+
+            // as a first step validate that application war file path is specified
+            if (!applicationGroupId) {
+                throw new GradleException("System property 'application.groupId' value is not defined!")
+            }
+            if (!applicationArtifactId) {
+                throw new GradleException("System property 'application.artifactId' value is not defined!")
+            }
+            if (!applicationVersion) {
+                throw new GradleException("System property 'application.version' value is not defined!")
+            }
+            groupId applicationGroupId
+            artifactId applicationArtifactId
+            version applicationVersion
+
+            project.shadow.component(publication)
+        }
+    }
+}
+
+// task for checking whick repositories are configured
+task listRepositories {
+    doLast {
+        println "Repositories:"
+        project.repositories.each {
+           println "Name: ${it.name}; url: ${it.url}"
+        }
+   }
 }

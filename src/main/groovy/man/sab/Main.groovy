@@ -42,9 +42,9 @@ class Main {
 
         println "Configration that will be used\n${Configuration.dumpToString(configuration)}\n"
 
-        URL appWarFileUrl = Main.class.getClassLoader().getResource("META-INF/app.war");
+        URL applicationWarFileUrl = Main.class.getClassLoader().getResource("META-INF/application.war");
         // resource is not found?!
-        if (appWarFileUrl == null) {
+        if (applicationWarFileUrl == null) {
             throw new RuntimeException("File 'META-INF/app.war' is not found inside jar archive");
         }
         // create temp folder where app will be extracted
@@ -53,7 +53,7 @@ class Main {
         applicationTempDir.deleteOnExit();
 
         System.out.println("Extracting application war file into '" + applicationTempDir.getAbsolutePath() + "' folder");
-        extract(appWarFileUrl, applicationTempDir);
+        extract(applicationWarFileUrl, applicationTempDir);
 
         Tomcat tomcat = new Tomcat();
 
