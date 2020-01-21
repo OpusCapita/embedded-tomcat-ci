@@ -1,19 +1,40 @@
 package man.sab.configuration
 
+import java.nio.file.Files
+
 import org.yaml.snakeyaml.Yaml
 import org.yaml.snakeyaml.constructor.Constructor
 
+/*
+ * ToDo
+ * - add ajp connector support
+ * - tomcatJvmRoute
+ */
 class Configuration {
 
     static Map getDefault() {
         [
             application: [
+                // application configuration.properties file path
                 configurationFilePath: null
             ],
             tomcat: [
-                port: 80,
-                contextPath: '/'
-            ]
+                port: 8080,
+                httpConnector: [
+                    URIEncoding: 'UTF-8',
+                    useBodyEncodingForURI: true,
+                    maxHttpHeaderSize: 32768,
+                    relaxedQueryChars: "[,],{,},|",
+                    enableCompression: true,
+                    compressableMimeType: "text/html,application/xhtml+xml,application/json,text/json",
+                ],
+                // add RemoteIpValve
+                enableProxySupport: true,
+                // application context path ("" - means root)
+                contextPath: '',
+            ],
+            // working directory path that will be used for storing extracted application war file and etc.
+            workDirPath: Files.createTempDirectory("${new Date().format("YYYY-MM-dd")}-tomcat-").toFile().absolutePath
         ]
     }
 

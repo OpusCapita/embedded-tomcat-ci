@@ -52,7 +52,7 @@ shadowJar {
     dependencies {
         exclude(dependency(':testng:'))
         exclude(dependency(':junit:'))
-        exclude(dependency('org.codehaus.groovy:'))
+        // exclude(dependency('org.codehaus.groovy:'))
         exclude(dependency('org.spockframework:'))
     }
 
