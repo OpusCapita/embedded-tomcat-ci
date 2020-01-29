@@ -2,6 +2,7 @@ package man.sab.configuration
 
 import java.nio.file.Files
 
+import org.yaml.snakeyaml.DumperOptions
 import org.yaml.snakeyaml.Yaml
 import org.yaml.snakeyaml.constructor.Constructor
 
@@ -10,14 +11,13 @@ import org.yaml.snakeyaml.constructor.Constructor
  * - add ajp connector support
  * - tomcatJvmRoute
  */
-class Configuration {
+class Config {
 
     static Map getDefault() {
         [
-            application: [
-                // application configuration.properties file path
-                configurationFilePath: null
-            ],
+            configurationProperties: null,
+            // application context path ("" - means root)
+            contextPath: '',
             tomcat: [
                 port: 8080,
                 httpConnector: [
@@ -30,11 +30,16 @@ class Configuration {
                 ],
                 // add RemoteIpValve
                 enableProxySupport: true,
-                // application context path ("" - means root)
-                contextPath: '',
+            ],
+            josso: [
+                enabled: false,
+                publicUrl: null,
+                serviceUrl: null,
+                applicationId: null,
+                applicationPublicUrl: null,
             ],
             // working directory path that will be used for storing extracted application war file and etc.
-            workDirPath: Files.createTempDirectory("${new Date().format("YYYY-MM-dd")}-tomcat-").toFile().absolutePath
+            workDir: Files.createTempDirectory("${new Date().format("YYYY-MM-dd")}-tomcat-").toFile().absolutePath
         ]
     }
 
@@ -47,7 +52,9 @@ class Configuration {
     }
 
     static dumpToString(def configuration) {
-        new Yaml().dump(configuration)
+        DumperOptions options = new DumperOptions();
+        options.setDefaultFlowStyle(DumperOptions.FlowStyle.BLOCK)
+        new Yaml(options).dump(configuration)
     }
 
     static Map merge(Map[] sources) {

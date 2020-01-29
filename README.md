@@ -46,23 +46,31 @@ java -jar <path to you executable jar file> -Dconfig.files=config.yaml
 
 ## Configuration reference
 ```yaml
-application:
-  configutation-file-path: <path to configuration>    # (String )path to configuration.properties file,                                                            # examples:
-                                                      #  /a/b/c/configuration.properties
-                                                      #  ./configuration.properties
+configurationProperties:
+  # configurratio.properties content
+  # key: value
+contextPath:                  # Application context path. "" (root) by default.
+                              # Examples:
+                              #  '/prov'
+                              #  '/procurement/prov
 tomcat:
-  port:                                               # (Integer) 8080 by default
-  contextPath: <application context path>             # "" (root) by default. Examples:
-                                                      #  '/prov'
-                                                      #  '/procurement/prov
+  port:                       # (Integer) 8080 by default
   httpConnector:
-      URIEncoding:                                    # 'UTF-8' by default
-      useBodyEncodingForURI:                          # true by default
-      maxHttpHeaderSize:                              # 32768 by default
-      relaxedQueryChars:                              # "[,],{,},|" by default
-      enableCompression:                              # true by default
-      compressableMimeType:                           # "text/html,application/xhtml+xml,application/json,text/json" by default
-
+      URIEncoding:            # 'UTF-8' by default
+      useBodyEncodingForURI:  # true by default
+      maxHttpHeaderSize:      # 32768 by default
+      relaxedQueryChars:      # "[,],{,},|" by default
+      enableCompression:      # true by default
+      compressableMimeType:   # "text/html,application/xhtml+xml,application/json,text/json" by default
+josso:
+  enabled: true                                    # whether JoSSO is enabled or not
+  publicUrl: http://josso.com                      # JoSSO public URL
+  serviceUrl: http://josso.local                   # JoSSO service URL
+  applicationId: prov                              # installed application ID
+  applicationPublicUrl: http://localhost:8080/ppp  # installed application public URL
+workDir: /usr/share/prov                           # base dirtory, where application will be
+                                                   # extracted and necessary configuration files
+                                                   # will be placed during app execution
 ```
 
 ## References

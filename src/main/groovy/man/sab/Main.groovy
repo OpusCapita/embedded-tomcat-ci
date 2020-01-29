@@ -7,20 +7,19 @@ import java.nio.file.Files
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 
-import man.sab.configuration.Configuration
+import man.sab.configuration.Config
 
 import org.apache.catalina.LifecycleEvent
 import org.apache.catalina.LifecycleException
 import org.apache.catalina.LifecycleListener
 import org.apache.catalina.LifecycleState
-import org.apache.catalina.core.StandardContext
 import org.apache.catalina.core.StandardServer
 import org.apache.catalina.startup.Tomcat
 import org.apache.catalina.valves.RemoteIpValve
 
 class Main {
     static void main(String[] args)  {
-        println "Parsing configuration"
+        println "Parsing arguments"
 
         // Options
         OptionsParser parser = OptionsParser.newOptionsParser(Options);
@@ -33,41 +32,105 @@ class Main {
         }
         println ""
 
-        def configuration = Configuration.default;
-        if (options.configurationFilePath) {
-            def configurationFile = new File(options.configurationFilePath)
+        def configuration = Config.default;
+        if (options.configuration) {
+            def configurationFile = new File(options.configuration)
             if (!configurationFile.exists()) {
                 println "Configuration file '${configurationFile}' is not found";
                 System.exit(1);
             }
             configurationFile.withInputStream {def is ->
-                configuration = Configuration.load(is)
+                configuration = Config.load(is)
             }
         }
 
-        println "Configration that will be used\n${Configuration.dumpToString(configuration)}\n"
+        println "Configration that will be used\n\n${Config.dumpToString(configuration)}\n"
 
-        def workDirPath = configuration.workDirPath
-        if (!workDirPath) {
-            throw new RuntimeException("'workDirPath' is not defined!");
+        if (!configuration.workDir) {
+            throw new RuntimeException("'workDir' is not defined!");
         }
-        def workDir = new File(workDirPath);
-        if (!new File(workDirPath).exists()) {
-            throw new RuntimeException("Work dorectory '${workDir}' does not exists!");
-        }
+        def workDir = new File(configuration.workDir);
+        // delete old dir if it exists
+        workDir.deleteDir()
+        // create it again
+        workDir.mkdirs();
+
+        println "DEBUG: working directory: '${workDir}'"
+
         // extract appllucation war file
-        def applicationTempDir = extractWarFile(workDir)
+        def applicationDir = extractWarFileAndConfigure(workDir, configuration)
         // create tomcat instance
         def tomcat = new Tomcat()
+
+        configureTomcat(tomcat, workDir, applicationDir, configuration)
+        Josso.configure(tomcat, workDir, configuration)
+
+        try {
+            println("Start tomcat");
+            tomcat.start();
+            tomcat.server.await();
+        } catch(LifecycleException e) {
+            e.printStackTrace();
+            System.err.println("Tomcat start failed '${e.message}'");
+            System.exit(1);
+        }
+    }
+
+    // returns directory were applicatino was extracted
+    static File extractWarFileAndConfigure(File workDirectory, configuration) {
+        URL applicationWarFileUrl = Main.class.classLoader.getResource("META-INF/application.war");
+        // resource is not found?!
+        if (applicationWarFileUrl == null) {
+            throw new RuntimeException("File 'META-INF/app.war' is not found inside jar archive");
+        }
+        // folder where application will be extracted
+        File applicationTempDir = new File(workDirectory, "application");
+        // delete old dir if it exists
+        applicationTempDir.deleteDir()
+        // create it again
+        applicationTempDir.mkdirs();
+        // on JVM shutdown delete this dir
+        applicationTempDir.deleteOnExit();
+
+        System.out.println("DEBUG: extracting application war file into '${applicationTempDir.absolutePath}' directory");
+        unzip(applicationWarFileUrl, applicationTempDir);
+
+        if (configuration.configurationProperties) {
+            Properties configurationProperties = new Properties();
+            configurationProperties.putAll(configuration.configurationProperties);
+            // create new file or replace content of exiting application configuration file
+            def configurationPropertiesFile = new File(applicationTempDir, 'WEB-INF/conf/configuration.properties')
+            if (!configurationPropertiesFile.exists()) {
+                configurationPropertiesFile.parentFile.mkdirs()
+                configurationPropertiesFile.createNewFile()
+            }
+            configurationPropertiesFile.withWriter {writer ->
+                configurationProperties.store(writer, null)
+            }
+            println "\nDEBUG: configuration.properties file content\n\n${configurationPropertiesFile.text}\n"
+        } else {
+            println "DEBUG: 'configurationProperties' is not defined"
+        }
+
+        return applicationTempDir
+    }
+
+    static configureTomcat(tomcat, workDir, applicationDir, configuration) {
+        // todo: tomcat creates temp dir for webapp like "tomcat.8080", not clear how to change its location
         // configure application context
-        def context = (StandardContext) tomcat.addWebapp(configuration.tomcat.contextPath, applicationTempDir.absolutePath);
-        println "Сonfiguring app with basedir '${applicationTempDir.absolutePath}'"
+        def context = tomcat.addWebapp(configuration.contextPath, applicationDir.absolutePath);
+        // File applicationWorkDir = new File(workDir, "application-work")
+		// applicationWorkDir.deleteDir()
+        // applicationWorkDir.mkdirs()
+        // context.workDir = applicationWorkDir
+        // println "DEBUG: application  work dir: '${applicationWorkDir.absolutePath}'"
         // set up port
-        tomcat.setPort(configuration.tomcat.port)
+        tomcat.port = configuration.tomcat.port
         // set up base tomcat directory
         File tomcatBaseDir = new File(workDir, "tomcat-tmp")
-		tomcatBaseDir.deleteDir();
-        tomcat.setBaseDir(tomcatBaseDir.absolutePath)
+		tomcatBaseDir.deleteDir()
+        tomcatBaseDir.mkdirs()
+        tomcat.baseDir = tomcatBaseDir.absolutePath
         // configure http connector
         def connector = tomcat.connector;
         // base set up
@@ -112,38 +175,6 @@ class Main {
 				}
 			}
 		});
-
-        try {
-            println("Start tomcat");
-            tomcat.start();
-            // tomcat.server.await();
-        } catch(LifecycleException e) {
-            e.printStackTrace();
-            System.err.println("Tomcat start failed '${e.message}'");
-            System.exit(1);
-        }
-    }
-
-    // returns directory were applicatino was extracted
-    static File extractWarFile(File workDirectory) {
-        URL applicationWarFileUrl = Main.class.classLoader.getResource("META-INF/application.war");
-        // resource is not found?!
-        if (applicationWarFileUrl == null) {
-            throw new RuntimeException("File 'META-INF/app.war' is not found inside jar archive");
-        }
-        // folder where application will be extracted
-        File applicationTempDir = new File(workDirectory, "application");
-        // delete old dir if it exists
-        applicationTempDir.deleteDir()
-        // create it again
-        applicationTempDir.mkdirs();
-        // on JVM shutdown delete this dir
-        applicationTempDir.deleteOnExit();
-
-        System.out.println("Extracting application war file into '${applicationTempDir.absolutePath}' directory");
-        unzip(applicationWarFileUrl, applicationTempDir);
-
-        return applicationTempDir
     }
 
     static void unzip(URL urlToZipFile, File targetDir) throws IOException {
@@ -176,4 +207,6 @@ class Main {
             zip.close();
         }
     }
+
+
 }

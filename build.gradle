@@ -13,6 +13,10 @@ plugins {
     id 'maven-publish'
 }
 
+configurations {
+    jossoAgent { transitive = false }
+}
+
 dependencies {
     // Use the latest Groovy version for building this library
     implementation 'org.codehaus.groovy:groovy-all:2.3.7'
@@ -35,7 +39,27 @@ dependencies {
            "org.apache.tomcat:tomcat-annotations-api:${tomcatVersion}",
            "org.apache.tomcat.embed:tomcat-embed-websocket:${tomcatVersion}",
            "org.apache.tomcat:tomcat-jdbc:${tomcatVersion}"
+
+    // jossoAgent 'com.opuscapita.josso:tomcat7-agent-oce:2.1.4:bin@zip'
+    jossoAgent 'com.opuscapita.josso:tomcat7-agent-oce:2.1.5-custom-component-keeper-factory-SNAPSHOT:bin@zip'
 }
+
+task unzipJosso(type: Copy) {
+    from zipTree(configurations.jossoAgent.singleFile).matching {
+        // we ned only jar files
+        // josso agent also contains 'josso-agent-config.xml'
+        // but this file we would create/configure from scratch at
+        // application startup
+        include '*/lib/*.jar'
+    }
+    eachFile {fcp ->
+        fcp.path = "./"
+        fcp.name = fcp.sourceName
+    }
+    into "$buildDir/josso-agent"
+    includeEmptyDirs = false
+}
+compileJava.dependsOn(unzipJosso)
 
 shadowJar {
     def applicationWarFilePath = System.properties['application.warFilePath']
@@ -47,8 +71,11 @@ shadowJar {
         if (!new File(applicationWarFilePath).exists()) {
             throw new GradleException("Application war file is not found by path '${applicationWarFilePath}'!")
         }
+        // add josso agent libraries (jar files) into archive
+        from(new File("$buildDir/josso-agent").listFiles())
     }
 
+    // excluding dependencies that are used for tests
     dependencies {
         exclude(dependency(':testng:'))
         exclude(dependency(':junit:'))
@@ -61,6 +88,7 @@ shadowJar {
         attributes 'Main-Class': 'man.sab.Main'
     }
 
+    // result jar file will have name <...>-executable.jar
     classifier = 'executable'
 
     // copy original war file into result JAR
