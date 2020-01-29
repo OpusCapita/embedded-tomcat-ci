@@ -1,4 +1,4 @@
-package man.sab.configuration
+package com.opuscapita.tomcat.embedded.configuration
 
 import java.nio.file.Files
 
@@ -39,7 +39,7 @@ class Config {
                 applicationPublicUrl: null,
             ],
             // working directory path that will be used for storing extracted application war file and etc.
-            workDir: Files.createTempDirectory("${new Date().format("YYYY-MM-dd")}-tomcat-").toFile().absolutePath
+            workDir: null
         ]
     }
 

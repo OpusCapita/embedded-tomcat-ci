@@ -1,4 +1,4 @@
-package man.sab;
+package com.opuscapita.tomcat.embedded;
 
 import com.google.devtools.common.options.OptionsParser
 
@@ -7,7 +7,7 @@ import java.nio.file.Files
 import java.util.zip.ZipEntry
 import java.util.zip.ZipInputStream
 
-import man.sab.configuration.Config
+import com.opuscapita.tomcat.embedded.configuration.Config
 
 import org.apache.catalina.LifecycleEvent
 import org.apache.catalina.LifecycleException
@@ -46,16 +46,16 @@ class Main {
 
         println "Configration that will be used\n\n${Config.dumpToString(configuration)}\n"
 
+        def workDir;
         if (!configuration.workDir) {
-            throw new RuntimeException("'workDir' is not defined!");
+            workDir = Files.createTempDirectory("${new Date().format("YYYY-MM-dd")}-tomcat-").toFile()
+            println "Configuration 'workDir' was not specified, instead temp folder '${workDir.absolutePath}' will be used"
+        } else {
+            workDir = new File(configuration.workDir);
+            println "Configured 'workDir' is '${workDir.absolutePath}'"
         }
-        def workDir = new File(configuration.workDir);
-        // delete old dir if it exists
-        workDir.deleteDir()
-        // create it again
+        // make sure that work directory exists
         workDir.mkdirs();
-
-        println "DEBUG: working directory: '${workDir}'"
 
         // extract appllucation war file
         def applicationDir = extractWarFileAndConfigure(workDir, configuration)

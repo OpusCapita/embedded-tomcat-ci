@@ -1,0 +1,28 @@
+plugins {
+    id 'groovy'
+}
+
+dependencies {
+    // Use the latest Groovy version for building this library
+    implementation 'org.codehaus.groovy:groovy-all:2.3.7'
+
+    // Use the awesome Spock testing and specification framework
+    testImplementation 'org.spockframework:spock-core:1.1-groovy-2.3'
+
+    implementation 'org.yaml:snakeyaml:1.25'
+    implementation 'com.github.pcj:google-options:1.0.0'
+
+    def tomcatVersion = System.properties['tomcat.version']?:'7.0.99'
+    // println "tomat version: '${tomcatVersion}'"
+    implementation "org.apache.tomcat.embed:tomcat-embed-core:${tomcatVersion}",
+           "org.apache.tomcat.embed:tomcat-embed-jasper:${tomcatVersion}",
+           "org.apache.tomcat.embed:tomcat-embed-el:${tomcatVersion}",
+           "org.apache.tomcat:tomcat-jasper:${tomcatVersion}",
+           "org.apache.tomcat:tomcat-jasper-el:${tomcatVersion}",
+           "org.apache.tomcat:tomcat-jsp-api:${tomcatVersion}",
+           "org.apache.tomcat.embed:tomcat-embed-logging-juli:${tomcatVersion}",
+           "org.apache.tomcat.embed:tomcat-embed-logging-log4j:${tomcatVersion}",
+           "org.apache.tomcat:tomcat-annotations-api:${tomcatVersion}",
+           "org.apache.tomcat.embed:tomcat-embed-websocket:${tomcatVersion}",
+           "org.apache.tomcat:tomcat-jdbc:${tomcatVersion}"
+}
