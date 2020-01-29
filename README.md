@@ -98,9 +98,9 @@ Start applocation with default configuration
 java -jar <path to you executable jar file>
 ```
 
-Passing configuration to application via system variable `config.files`
+Passing configuration to application via system property `configuration`
 ```sh
-java -jar <path to you executable jar file> -Dconfig.files=config.yaml
+java -jar <path to you executable jar file> -Dconfiguration=config.yaml
 ```
 
 ## Configuration reference
