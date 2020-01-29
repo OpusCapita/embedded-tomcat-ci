@@ -2,22 +2,81 @@
 
 ## Prerequisites
 
-JDK 8 to build artifact
-JRE 8 to run application
+Installed tools:
+- JDK 8
+- Gradle 6.x
+
+P.S. Be sure that Gradle dependencies and maven-publish plugin are configured configuration !
+
+**Gradle configuration example**
+
+```groovy
+allprojects {
+    apply plugin: 'maven-publish'
+
+    repositories {
+        maven {
+            url "https://opuscapita.jfrog.io/opuscapita/maven-get"
+            credentials {
+                username "bob"
+                password "kinikinik"
+            }
+        }
+
+        maven {
+            url 'https://repo1.maven.org/maven2/'
+            mavenContent {
+                releasesOnly()
+            }
+        }
+        maven {
+            url "https://central.maven.org/maven2/"
+            mavenContent {
+                releasesOnly()
+            }
+        }
+        maven {
+            url "https://oss.sonatype.org/content/repositories/releases"
+            mavenContent {
+                releasesOnly()
+            }
+        }
+    }
+
+    publishing {
+        repositories {
+            maven {
+                name 'artifactory'
+                url "https://opuscapita.jfrog.io/opuscapita/maven-get"
+                credentials {
+                    username "hannah"
+                    password "madam"
+                }
+            }
+        }
+    }
+}
+```
 
 ## Application (executable jar) build: howto
 
-Before junning application/service set up necessary env variables
-
-```sh
-# Java options necessary to compile/build project
-export JAVA_OPTS=...
-```
-
 ```sh
 # build executable jar file
-gradle clean shadowJar -Dapplication.warFilePath=[path to your war file] -Dapplication.groupId=[group id] -Dapplication.artifactId=[artifact id] -Dapplication.version=[version]
+gradle clean shadowJar \
+  -Dapplication.war=<path to application war file> \
+  -Dapplication.groupId=<application group id> \
+  -Dapplication.artifactId=>application artifact id> \
+  -Dapplication.version=<application version> \
+  -Dtomcat.version=<tomcat version> \
+  -Djosso.version=<inhouse customized/modified josso version)
 ```
+
+Notes:
+- `application.war` - you should have you application war file somewere near by on FS (may be later we could skip it and then corresponding war file will be downloaded from maven repository automatically)
+- `application.groupId`, `application.artifactId`, `application.version` are used for result jar file deployment, these parametrs defines Maven artifact coordinates. Additionally to it predefined classifier **executable** and packaging **jar** will be used
+- if `tomcat.version` is not specified, version hardcoded in [build.gradle](build.gradle) will be used
+- if `josso.version` is not specified, version hardcoded in [build.gradle](build.gradle) will be used
+
 After successful command execution you can find result jar file undex path ```./build/libs/[artifact id]-[version]-executable.jar```
 
 If you would like to deploy result artufact into local Maven repository type the following in you terminal

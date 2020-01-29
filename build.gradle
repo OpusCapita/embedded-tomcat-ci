@@ -27,7 +27,8 @@ dependencies {
     implementation 'org.yaml:snakeyaml:1.25'
     implementation 'com.github.pcj:google-options:1.0.0'
 
-    def tomcatVersion = '7.0.99'
+    def tomcatVersion = System.properties['tomcat.version']?:'7.0.99'
+    println "tomat version: '${tomcatVersion}'"
     implementation "org.apache.tomcat.embed:tomcat-embed-core:${tomcatVersion}",
            "org.apache.tomcat.embed:tomcat-embed-jasper:${tomcatVersion}",
            "org.apache.tomcat.embed:tomcat-embed-el:${tomcatVersion}",
@@ -41,7 +42,9 @@ dependencies {
            "org.apache.tomcat:tomcat-jdbc:${tomcatVersion}"
 
     // jossoAgent 'com.opuscapita.josso:tomcat7-agent-oce:2.1.4:bin@zip'
-    jossoAgent 'com.opuscapita.josso:tomcat7-agent-oce:2.1.5-custom-component-keeper-factory-SNAPSHOT:bin@zip'
+    def jossoVersion = System.properties['josso.version']?:"2.1.5-custom-component-keeper-factory-SNAPSHOT"
+    println "josso version: '${jossoVersion}'"
+    jossoAgent "com.opuscapita.josso:tomcat7-agent-oce:${jossoVersion}:bin@zip"
 }
 
 task unzipJosso(type: Copy) {
@@ -62,7 +65,7 @@ task unzipJosso(type: Copy) {
 compileJava.dependsOn(unzipJosso)
 
 shadowJar {
-    def applicationWarFilePath = System.properties['application.warFilePath']
+    def applicationWarFilePath = System.properties['application.war']
     doFirst {
         // as a first step validate that application war file path is specified
         if (!applicationWarFilePath) {
